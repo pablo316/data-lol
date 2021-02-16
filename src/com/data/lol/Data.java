@@ -20,6 +20,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 
@@ -35,19 +36,20 @@ public class Data {
         JsonObject dataChampions= new JsonObject();
         ArrayList<Summoner> listMatches= new ArrayList<>();
         dataChampions=getChampion(patch);
-        dataItems = getItems(patch);
         Integer id=dataChampions.get(champion).getAsJsonObject().get("key").getAsInt();
         String accountId =getSummonerId(summoner, apiKey);
         ArrayList<Integer> matchesId= getMatchList(accountId,apiKey, id);
         for (int i=0;i<matchesId.size();i++){
             dataMatches.add(getMatches(matchesId.get(i),apiKey));
         }
-        listMatches=summonerMatches(dataMatches,dataItems,summoner, champion,dataChampions);
-        writeExcel(listMatches,summoner,champion);
-        System.out.println(listMatches.size());
+        if(dataMatches.size()>0){
+            listMatches=summonerMatches(dataMatches,summoner, champion,dataChampions);
+            writeExcel(listMatches,summoner,champion);
+            System.out.println("Archivo creado");
+        }
     }
 
-    public ArrayList<Summoner> summonerMatches(JsonArray data, JsonObject items, String name,  String champ,JsonObject champions){
+    public ArrayList<Summoner> summonerMatches(JsonArray data,  String name,  String champ,JsonObject champions){
         ArrayList<Summoner> summonerList = new ArrayList<>();
         Integer participantId=0;
         String role="";
@@ -69,17 +71,7 @@ public class Data {
             aux=json.get("participants").getAsJsonArray().get(participantId - 1).getAsJsonObject();
             role=aux.get("timeline").getAsJsonObject().get("role").getAsString();
             lane=aux.get("timeline").getAsJsonObject().get("lane").getAsString();
-            for(int j=0; j<7;j++){
-                String item=aux.get("stats").getAsJsonObject().get("item"+j).getAsString();
-                if(!item.equals("0")){
-                    if(items.has(item)){
-                        build=build.concat(items.get(item).getAsJsonObject().get("name").getAsString());
-                        if(j<6){
-                            build=build.concat(" - ");
-                        }
-                    }
-                }
-            }
+
             if(aux.get("stats").getAsJsonObject().get("win").getAsBoolean()){
                 summoner.setResult("Victoria");
             }else{
@@ -89,7 +81,6 @@ public class Data {
             summoner.setUrl(url);
             summoner.setKda(aux.get("stats").getAsJsonObject().get("kills").getAsString() + "/" + aux.get("stats").getAsJsonObject().get("deaths").getAsString() + "/" + aux.get("stats").getAsJsonObject().get("assists").getAsString());
             summoner.setChampName(champ);
-            summoner.setItems(build);
             rival=getChampionName(champions,role,lane,json.get("participants").getAsJsonArray(),participantId);
             summoner.setRivalName(rival);
             summonerList.add(summoner);
@@ -160,8 +151,12 @@ public class Data {
                 .method("GET", null)
                 .build();
         Response response = null;
-            response = client.newCall(request).execute();
-        accountId=parser.parse(response.body().string()).getAsJsonObject().get("accountId").getAsString();
+        response = client.newCall(request).execute();
+        if(response.code() == 200){
+            accountId=parser.parse(response.body().string()).getAsJsonObject().get("accountId").getAsString();
+        }else{
+            System.out.println("Error: Nombre de invocador incorrecto o Error de Red");
+        }
         return accountId;
 
     }
@@ -177,9 +172,13 @@ public class Data {
                  .build();
          Response response = null;
          response = client.newCall(request).execute();
-         JsonArray json=parser.parse(response.body().string()).getAsJsonObject().get("matches").getAsJsonArray();
-         for(int i=0; i<json.size();i++){
-             array.add(json.get(i).getAsJsonObject().get("gameId").getAsInt());
+         if(response.code() == 200){
+             JsonArray json=parser.parse(response.body().string()).getAsJsonObject().get("matches").getAsJsonArray();
+             for(int i=0; i<json.size();i++){
+                 array.add(json.get(i).getAsJsonObject().get("gameId").getAsInt());
+             }
+         }else{
+             System.out.println("Error: No hay partidas en SoloQ con ese Campeón o Error de Red");
          }
         return array;
     }
@@ -208,8 +207,7 @@ public class Data {
                 "Enemigo",
                 "Resultado",
                 "KDA",
-                "Url",
-                "Items"
+                "Url"
         };
 
         CellStyle headerStyle = workbook.createCellStyle();
@@ -236,13 +234,12 @@ public class Data {
             dataRow.createCell(2).setCellValue(Data.get(i).getResult());
             dataRow.createCell(3).setCellValue(Data.get(i).getKda());
             dataRow.createCell(4).setCellValue(Data.get(i).getUrl());
-            dataRow.createCell(5).setCellValue(Data.get(i).getItems());
         }
 
-        java.util.Date fecha = new Date();
-        System.out.println (fecha);
+        Calendar date = Calendar.getInstance();
+        int mes=date.get(Calendar.MONTH)+1;
 
-        FileOutputStream file = new FileOutputStream(summoner + "-" + champion +".xls");
+        FileOutputStream file = new FileOutputStream("docs/"+summoner + "-" + champion + "-" + Integer.toString(date.get(Calendar.DATE)) + "-" + mes +".xls");
         workbook.write(file);
         file.close();
     }

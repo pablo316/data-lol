@@ -6,7 +6,6 @@ public class Summoner {
     public String rivalName;
     public String result;
     public String kda;
-    public String items;
     public String url;
 
     public String getUrl() {
@@ -49,11 +48,4 @@ public class Summoner {
         this.kda = kda;
     }
 
-    public String getItems() {
-        return items;
-    }
-
-    public void setItems(String items) {
-        this.items = items;
-    }
 }

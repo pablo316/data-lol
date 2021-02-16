@@ -8,6 +8,7 @@ public class Main {
         String flag="y",summoner, champion, patch="vacio", apiKey="vacio";
         Data data= new Data();
         Scanner input = new Scanner(System.in);
+        Scanner sum = new Scanner(System.in);
         while(flag.equals("y")){
             System.out.print("Obtener datos (y: para continuar, n:para salir): ");
             flag = input.next();
@@ -18,10 +19,10 @@ public class Main {
                     System.out.print("patch: ");
                     patch = input.next();
                 }
-                System.out.print("summoner: ");
-                summoner = input.next();
                 System.out.print("champion: ");
                 champion = input.next();
+                System.out.print("summoner: ");
+                summoner = sum.nextLine();
                 data.datos(summoner,champion,apiKey,patch);
             }
         }
